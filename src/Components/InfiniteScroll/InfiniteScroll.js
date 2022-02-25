@@ -1,147 +1,133 @@
-import React, {useState, useEffect, useRef} from 'react'
-import './InfiniteScroll.css'
-import {v4 as uuidv4} from 'uuid'
+import React, { useState, useEffect, useRef } from 'react';
+import './InfiniteScroll.css';
+import { v4 as uuidv4 } from 'uuid';
 
 export default function InfiniteScroll() {
+	const [dataImg, setDataImg] = useState([[], [], []]);
+	const [pageIndex, setPageIndex] = useState(1);
+	const [searchState, setSearchState] = useState('random');
+	const [firstCall, setFirstCall] = useState(true);
 
-    const [dataImg, setDataImg] = useState([[], [], []])
-    const [pageIndex, setPageIndex] = useState(1)
-    const [searchState, setSearchState] = useState('random')
-    const [firstCall, setFirstCall] = useState(true)
+	const API_UNSPLASH = process.env.REACT_APP_API_KEY;
 
-    const API_UNSPLASH = process.env.REACT_APP_API_KEY
-    
-    const infiniteFetchData = () => {
+	const infiniteFetchData = () => {
+		fetch(
+			`https://api.unsplash.com/search/photos?page=${pageIndex}&per_page=30&query=${searchState}&client_id=${API_UNSPLASH}`
+		)
+			.then((response) => {
+				return response.json();
+			})
+			.then((data) => {
+				const imgReceived = [];
 
+				data.results.forEach((img) => {
+					imgReceived.push(img.urls.regular);
+				});
 
-        fetch(`https://api.unsplash.com/search/photos?page=${pageIndex}&per_page=30&query=${searchState}&client_id=${API_UNSPLASH}`)
-        .then((response) => {
-            return response.json()
-        })
-        .then((data) => {
-            
-            const imgReceived = [];
+				const newFreshState = [
+					[...dataImg[0]],
+					[...dataImg[1]],
+					[...dataImg[2]],
+				];
 
-            data.results.forEach((img) => {
-                imgReceived.push(img.urls.regular)
-            })
+				let index = 0;
+				for (let i = 0; i < 3; i++) {
+					for (let j = 0; j < 10; j++) {
+						newFreshState[i].push(imgReceived[index]);
+						index++;
+					}
+				}
 
-            const newFreshState = [
-                [...dataImg[0]],
-                [...dataImg[1]],
-                [...dataImg[2]],
-            ]
+				setDataImg(newFreshState);
+				setFirstCall(false);
+			});
+	};
 
-            let index = 0;
-            for(let i = 0; i < 3; i++){
-                for(let j = 0; j < 10; j++){
-                    newFreshState[i].push(imgReceived[index])
-                    index++;
-                }
-            }
+	const searchFetchData = () => {
+		fetch(
+			`https://api.unsplash.com/search/photos?page=${pageIndex}&per_page=30&query=${searchState}&client_id=${API_UNSPLASH}`
+		)
+			.then((response) => {
+				return response.json();
+			})
+			.then((data) => {
+				const imgReceived = [];
 
-            setDataImg(newFreshState)
-            setFirstCall(false)
+				data.results.forEach((img) => {
+					imgReceived.push(img.urls.regular);
+				});
 
-        })
+				const newFreshState = [[], [], []];
 
-    }
+				let index = 0;
+				for (let i = 0; i < 3; i++) {
+					for (let j = 0; j < 10; j++) {
+						newFreshState[i].push(imgReceived[index]);
+						index++;
+					}
+				}
 
-    const searchFetchData = () => {
+				setDataImg(newFreshState);
+			});
+	};
 
-        fetch(`https://api.unsplash.com/search/photos?page=${pageIndex}&per_page=30&query=${searchState}&client_id=${API_UNSPLASH}`)
-        .then((response) => {
-            return response.json()
-        })
-        .then((data) => {
-            
-            const imgReceived = [];
+	useEffect(() => {
+		if (firstCall) return;
+		searchFetchData();
+	}, [searchState]);
 
-            data.results.forEach((img) => {
-                imgReceived.push(img.urls.regular)
-            })
+	useEffect(() => {
+		infiniteFetchData();
+	}, [pageIndex]);
 
-            const newFreshState = [
-                [],
-                [],
-                [],
-            ]
+	const handleSearch = (e) => {
+		e.preventDefault();
 
-            let index = 0;
-            for(let i = 0; i < 3; i++){
-                for(let j = 0; j < 10; j++){
-                    newFreshState[i].push(imgReceived[index])
-                    index++;
-                }
-            }
+		setSearchState(inpRef.current.value);
+		setPageIndex(1);
+	};
 
-            setDataImg(newFreshState)
+	const inpRef = useRef();
 
-        })
+	useEffect(() => {
+		window.addEventListener('scroll', infiniteCheck);
 
-    }
+		return () => {
+			window.removeEventListener('scroll', infiniteCheck);
+		};
+	}, []);
 
-    useEffect(() => {
-        if(firstCall) return;
-        searchFetchData();
+	const infiniteCheck = () => {
+		const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
 
-    }, [searchState])
+		if (scrollHeight - scrollTop === clientHeight) {
+			setPageIndex((pageIndex) => pageIndex + 1);
+		}
+	};
 
-    useEffect(() => {
-        infiniteFetchData();
-    }, [pageIndex])
-
-    const handleSearch = e => {
-        e.preventDefault()
-
-        setSearchState(inpRef.current.value)
-        setPageIndex(1)
-    }
-
-    const inpRef = useRef();
-
-    useEffect(() => {
-        window.addEventListener('scroll', infiniteCheck)
-
-        return () => {
-            window.removeEventListener('scroll', infiniteCheck)
-        }
-    }, [])
-
-    const infiniteCheck = () => {
-
-        const {scrollTop, scrollHeight, clientHeight} = document.documentElement;
-
-        if(scrollHeight - scrollTop === clientHeight) {
-            setPageIndex(pageIndex => pageIndex + 1)
-        }
-
-    }
-
-    return (
-        <div className="container">
-            <form 
-            onSubmit={handleSearch}>
-                <label htmlFor="search">Votre recherche</label>
-                <input type="text" id="search" ref={inpRef} />
-            </form>
-            <div className="card-list">
-                <div>
-                    {dataImg[0].map(img => {
-                        return <img key={uuidv4()} src={img} alt='unsplash' />
-                    })}
-                </div>
-                <div>
-                {dataImg[1].map(img => {
-                        return <img key={uuidv4()} src={img} alt='unsplash' />
-                    })}
-                </div>
-                <div>
-                {dataImg[2].map(img => {
-                        return <img key={uuidv4()} src={img} alt='unsplash' />
-                    })}
-                </div>
-            </div>
-        </div>
-    )
+	return (
+		<div className='container'>
+			<form onSubmit={handleSearch}>
+				<label htmlFor='search'>Votre recherche</label>
+				<input type='text' id='search' ref={inpRef} />
+			</form>
+			<div className='card-list'>
+				<div>
+					{dataImg[0].map((img) => {
+						return <img key={uuidv4()} src={img} alt='unsplash' />;
+					})}
+				</div>
+				<div>
+					{dataImg[1].map((img) => {
+						return <img key={uuidv4()} src={img} alt='unsplash' />;
+					})}
+				</div>
+				<div>
+					{dataImg[2].map((img) => {
+						return <img key={uuidv4()} src={img} alt='unsplash' />;
+					})}
+				</div>
+			</div>
+		</div>
+	);
 }
